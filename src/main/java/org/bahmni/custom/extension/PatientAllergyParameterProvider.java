@@ -21,8 +21,7 @@ public class PatientAllergyParameterProvider implements SaleOrderParameterProvid
 
     try {
       String patientUuid = context.getPatientUuid();
-      String apiUrl = "/openmrs/ws/rest/v1/patient/" + patientUuid + "/allergy?v=default";
-
+      String apiUrl = "/openmrs/ws/rest/v1/patient/" + patientUuid + "/allergy";
       @SuppressWarnings("unchecked")
       Map<String, Object> response = (Map<String, Object>) openMrsGetFunction.apply(apiUrl, Map.class);
 
