@@ -47,16 +47,30 @@ public class PatientAllergyParameterProvider implements SaleOrderParameterProvid
           // Allergen Name & Type
           String allergyName = "Unknown Allergen";
           String allergenType = "OTHER";
+
           if (allergyRecord.containsKey("allergen") && allergyRecord.get("allergen") != null) {
             @SuppressWarnings("unchecked")
             Map<String, Object> allergen = (Map<String, Object>) allergyRecord.get("allergen");
-            if (allergen.containsKey("display"))
-              allergyName = (String) allergen.get("display");
-            if (allergen.containsKey("allergenType"))
+
+            // Grab the type
+            if (allergen.containsKey("allergenType")) {
               allergenType = (String) allergen.get("allergenType");
+            }
+
+            // Dig deeper to find the actual name (coded or non-coded)
+            if (allergen.containsKey("codedAllergen") && allergen.get("codedAllergen") != null) {
+              @SuppressWarnings("unchecked")
+              Map<String, Object> coded = (Map<String, Object>) allergen.get("codedAllergen");
+              if (coded.containsKey("display")) {
+                allergyName = (String) coded.get("display");
+              }
+            } else if (allergen.containsKey("nonCodedAllergen") && allergen.get("nonCodedAllergen") != null) {
+              allergyName = (String) allergen.get("nonCodedAllergen");
+            }
           } else if (allergyRecord.containsKey("display")) {
             allergyName = (String) allergyRecord.get("display");
           }
+
           allergyData.put("allergen_name", allergyName);
           allergyData.put("allergen_type", allergenType);
 
