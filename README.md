@@ -1,25 +1,30 @@
-# Bahmni Odoo Connect: Structured Patient Allergy Extension
+# Bahmni-Odoo Clinical Data Extension
 
-This repository contains a custom Spring extension for the Bahmni `openerp-atomfeed-service` (`odoo-connect`). It dynamically intercepts Sale Order (Encounter) synchronization events, fetches patient allergy profiles from OpenMRS, and attaches them as a structured JSON payload to the data sent to Odoo.
+## 📖 Overview
+This repository contains a modular Spring extension for the Bahmni `openerp-atomfeed-service` (`odoo-connect`). It intercepts standard Sale Order (Encounter) synchronization events and enriches the outgoing XML-RPC/JSON payload with detailed clinical data from OpenMRS. 
 
-## Why This Exists
-By default, the Bahmni-to-Odoo synchronization process does not include clinical allergy data. When a doctor creates a drug order or lab test, Odoo processes the billing without knowing the patient's allergies. 
+---
 
-This extension bridges that gap. It utilizes the `SaleOrderParameterProvider` interface to:
-1. Intercept a Sale Order event right before it is transmitted to Odoo.
-2. Securely query the OpenMRS REST API (`/ws/rest/v1/patient/{uuid}/allergy`) for the specific patient.
-3. Parse the response and format it into a clean, structured List of Maps containing the UUID, allergen name, type, severity, and reactions.
-4. Inject this structured data as a new parameter (`patient_allergies_payload`) into the final XML-RPC payload, serialized as a JSON array using Jackson.
+## 🌟 Features & Data Mapping
 
-## 📋 Prerequisites
-* **Java 17** (Required to match the Bahmni `odoo-connect` environment)
-* **Maven 3.x**
-* Target Bahmni Environment utilizing `odoo-connect-extensions:1.1.0-SNAPSHOT`
-* **Jackson Databind** (`com.fasterxml.jackson.core:jackson-databind`) defined in the `pom.xml` with `<scope>provided</scope>`.
+This extension injects four critical clinical domains into the payload before it leaves the Java container. 
 
-## 🛠️ How to Build
+| Clinical Domain | Extracted Data | JSON Payload Key | Odoo Destination |
+| :--- | :--- | :--- | :--- |
+| **Demographics** | Age, Sex | `patient_age`, `patient_sex` | `res.partner` (Profile) |
+| **Vitals** | Height, Weight, Systolic, Diastolic | `reg_vitals` | `res.partner` (Profile) |
+| **Allergies** | Allergen, Severity, Reactions | `patient_allergies_payload` | `patient.allergy` (Custom) |
+| **Prescriptions** | Dose, Route, Frequency, Duration | `extended_prescription_details` | `sale.order.line` (Invoice) |
 
-1. Open a terminal in the root of this project.
-2. Run the following Maven command to download dependencies and compile the extension:
-   ```bash
-   mvn clean package -U
+---
+
+## 📁 Project Architecture
+
+The code follows a clean, modular `@Component` design. Each data domain has its own provider class implementing the `SaleOrderParameterProvider` interface. Spring automatically compiles and executes all of them during the sync event.
+
+```text
+src/main/java/org/bahmni/custom/extension/
+├── PatientDemographicsProvider.java   # Fetches Age & Sex from /person API
+├── PatientVitalsProvider.java         # Fetches Height/Weight/BP via Concept UUIDs
+├── PatientAllergyProvider.java        # Formats allergy arrays from /allergy API
+└── PrescriptionDetailsProvider.java   # Grabs clinical dosing from /encounter?v=full
